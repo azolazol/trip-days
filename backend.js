@@ -1,0 +1,9 @@
+'use strict';
+(()=>{
+ let owner;try{owner=localStorage.getItem('trip-days-owner');if(!/^[a-f0-9]{64}$/.test(owner||'')){owner=Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');localStorage.setItem('trip-days-owner',owner)}}catch{owner=Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('')}
+ const pending=new Map();let source=null,origin='',resolveReady;const ready=new Promise(r=>resolveReady=r),channel=crypto.randomUUID();const endpoint=window.TRIP_CONFIG?.appsScriptUrl;
+ if(endpoint){const iframe=document.createElement('iframe');iframe.hidden=true;iframe.title='Trip Days 데이터 연결';const u=new URL(endpoint);u.searchParams.set('channel',channel);iframe.src=u.href;document.body.append(iframe)}
+ window.addEventListener('message',event=>{const data=event.data;if(!data||data.channel!==channel)return;let host;try{host=new URL(event.origin).hostname}catch{return}if(host!=='script.google.com'&&!host.endsWith('.googleusercontent.com'))return;
+ if(data.type==='trip-ready'&&!source){source=event.source;origin=event.origin;resolveReady();return}if(event.source!==source||event.origin!==origin)return;const p=pending.get(data.id);if(p){clearTimeout(p.timer);pending.delete(data.id);data.error?p.reject(Error(data.error)):p.resolve(data.result)}});
+ window.tripApi=async(path,body)=>{if(!endpoint)throw Error('공유 저장소 연결 전입니다.');await Promise.race([ready,new Promise((_,reject)=>setTimeout(()=>reject(Error('저장소 연결이 지연돼요. 새로고침 후 다시 시도해주세요.')),12000))]);const id=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(Error('응답이 늦어지고 있어요. 저장 결과를 새로고침해 확인해주세요.'))},25000);pending.set(id,{resolve,reject,timer});source.postMessage({type:'trip-request',channel,id,payload:{path,body,city:window.TRIP_CITY?.id||'',token:owner}},origin)})};
+})();
