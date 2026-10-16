@@ -5,23 +5,23 @@
 ## 현재 준비 상태
 
 - 프런트엔드와 Apps Script 코드 완성, 로컬 로직 검증 통과.
-- Google Sheets: https://docs.google.com/spreadsheets/d/1bw0gTJ-FKieoPKFVlXPtSNSqK6dugjvQPrl2tHYSeUs/edit
-- GitHub 저장소: https://github.com/azolazol/trip-days — Pages 및 Apps Script 연결 진행 중입니다.
-- `config.js`의 `appsScriptUrl`은 배포 후 실제 `/exec` 주소로 채워야 합니다.
+- GitHub 저장소: https://github.com/azolazol/trip-days — GitHub Pages와 Apps Script 웹 앱을 배포했습니다.
+- `config.js`에 실제 웹 앱 `/exec` 주소가 설정되어 있습니다.
 
 ## 공개 연결 순서
 
 1. `azolazol` 계정에 공개 `trip-days` 저장소를 만들고 이 폴더 내용을 업로드합니다. 기존 저장소와 구분된 새 프로젝트입니다.
 2. GitHub Settings → Pages → Deploy from a branch → main / root를 선택합니다. 별도 빌드나 유료 API 키가 필요하지 않습니다.
-3. 위 Google Sheets에서 확장 프로그램 → Apps Script를 열고 `apps-script/Code.gs`, `Bridge.html`, `appsscript.json`을 각각 입력합니다.
+3. 관리용 Google Sheets에서 확장 프로그램 → Apps Script를 열고 `apps-script/Code.gs`, `Bridge.html`, `appsscript.json`을 각각 입력합니다.
 4. 프로젝트 설정 → 스크립트 속성에 아래 값을 지정합니다.
-   - `SPREADSHEET_ID`: `1bw0gTJ-FKieoPKFVlXPtSNSqK6dugjvQPrl2tHYSeUs`
+   - `SPREADSHEET_ID`: `관리용 스프레드시트 ID`
    - `SITE_ORIGIN`: `https://azolazol.github.io`
 5. 새 배포 → 웹 앱, 실행 사용자 '나', 액세스 '모든 사용자'로 배포합니다. Google 권한 승인은 소유자가 진행합니다. 스프레드시트 자체는 공개하지 않습니다.
 6. 반환된 웹 앱 `/exec` URL을 `config.js`의 `appsScriptUrl`에 입력하고 커밋합니다.
 7. 실제 배포 주소에서 도시 선택 → 내 장소 저장 → 다시 접속 → 추천 → 다른 브라우저 추천 확인 → 내 추천 철회 → 사진 저장을 확인합니다. 브라우저 종단 검증 전까지 배포 완료로 간주하지 않습니다.
 
-GitHub Pages 기본 예상 주소는 `https://azolazol.github.io/trip-days/`이며, 현재 실제 공개 여부는 확인되지 않았습니다.
+공개 사이트: https://azolazol.github.io/trip-days/
+
 
 ## 기능
 
