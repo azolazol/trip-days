@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto');
+let rows=[['id','created_at','owner_hash','city','category','message','reply_email','email_status']],sent=[];
+const sheet={getDataRange:()=>({getValues:()=>structuredClone(rows)}),getLastRow:()=>rows.length,getLastColumn:()=>8,appendRow:r=>rows.push(r),getRange:(r,c,n,m)=>({getValues:()=>[rows[r-1].slice(c-1,c-1+m)],setValues:v=>{rows[r-1]=v[0]}})};
+const ctx={Date,console,PropertiesService:{getScriptProperties:()=>({getProperty:()=> 'owner@example.com'})},MailApp:{sendEmail:m=>sent.push(m)},SpreadsheetApp:{flush(){}},Utilities:{}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/../apps-script/Code.gs','utf8'),ctx);
+ctx.table_=()=>sheet;ctx.rows_=name=>name==='Cities'?[{id:'osaka',name:'오사카',enabled:true}]:rows.slice(1).map(r=>Object.fromEntries(rows[0].map((k,i)=>[k,r[i]])));
+const id=crypto.randomUUID(),b={requestId:id,category:'개선 제안',message:'=수식 대신 안전한 텍스트로 저장',replyEmail:'visitor@example.com',consent:true},now=new Date().toISOString();
+const go=(body=b,owner='owner')=>ctx.feedback_({body,city:'osaka'},owner,now);
+assert(go().ok);assert.equal(sent.length,1);assert.equal(sent[0].to,'owner@example.com');assert(sent[0].body.includes(b.message));assert.equal(rows[1][5],"'"+b.message);assert.equal(rows[1][7],'SENT');assert(go().ok);assert.equal(sent.length,1);
+assert.throws(()=>go({...b,requestId:crypto.randomUUID()}));assert.throws(()=>go({...b,consent:false},'other'));assert.throws(()=>go({...b,website:'spam'},'other'));assert.throws(()=>go({...b,replyEmail:'a@b.com\nBcc:x@y.com'},'other'));assert.throws(()=>go({...b,message:'x'.repeat(3001)},'other'));
+ctx.MailApp.sendEmail=()=>{throw Error('quota')};assert(go({...b,requestId:crypto.randomUUID()},'other').ok);assert.equal(rows[2][7],'FAILED');
+console.log('PASS: private recipient, full message, dedupe, throttling, validation, formula escaping, mail failure retains inbox.');
