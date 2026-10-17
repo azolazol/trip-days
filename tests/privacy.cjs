@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),crypto=require('crypto');
+const elements=new Map(),storage=new Map(),listeners={},requests=[];let selectedMap='';
+const el=id=>{if(!elements.has(id))elements.set(id,{hidden:true,textContent:'',scrollIntoView(){},removeAttribute(k){delete this[k]}});return elements.get(id)};
+const context={document:{getElementById:el},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},crypto:crypto.webcrypto,Date,Event:class{constructor(type){this.type=type}},window:{addEventListener:(t,f)=>listeners[t]=f,dispatchEvent(){},tripApi:async(p,b)=>{requests.push([p,b]);return{ok:true}}}};
+vm.runInNewContext(fs.readFileSync(__dirname+'/../privacy.js','utf8'),context);
+(async()=>{const policy=context.window.tripPrivacy;
+assert.equal(policy.analyticsAllowed(),false);assert.throws(()=>policy.analyticsToken());assert.equal(storage.has('trip-days-analytics-v1'),false);
+policy.setMap('https://maps.google.com/test');assert.equal(el('map').src,undefined);el('loadExternalMap').onclick();assert.equal(el('map').src,'https://maps.google.com/test');el('disableExternalMap').onclick();assert.equal(el('map').src,undefined);policy.setMap('https://maps.google.com/next');assert.equal(el('map').src,undefined);
+await el('acceptAnalytics').onclick();assert.equal(policy.analyticsAllowed(),true);const token=policy.analyticsToken();assert(/^[a-f0-9]{64}$/.test(token));await el('rejectAnalytics').onclick();assert.equal(policy.analyticsAllowed(),false);assert.equal(storage.has('trip-days-analytics-v1'),false);assert.equal(requests[0][0],'/api/privacy-delete');assert.equal(requests[0][1].analyticsToken,token);
+console.log('PASS: analytics default off, no token before opt-in, matching-token withdrawal, Maps click-to-load and stop.');})();

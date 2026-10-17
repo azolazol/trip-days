@@ -37,7 +37,7 @@ const points=ids.map(id=>place(id).jp+' '+CITY.mapRegion);let links=[];const rem
 if(ids.length)links.push(`<a href="${esc(routeUrl([endpoint(),points[0]],'transit'))}" target="_blank" rel="noopener">첫 장소까지 대중교통</a>`);
 if(remoteDay){for(let i=0;i<points.length-1;i++)links.push(`<a href="${esc(routeUrl([points[i],points[i+1]],'transit'))}" target="_blank" rel="noopener">${i+1} → ${i+2} 구간 동선</a>`)}else{for(let i=0;i<points.length-1;i+=4){const chunk=points.slice(i,i+5);if(chunk.length>=2)links.push(`<a href="${esc(routeUrl(chunk,'walking'))}" target="_blank" rel="noopener">장소 간 도보 동선 ${Math.floor(i/4)+1}</a>`)}}
 $('routeLinks').innerHTML=links.join('')||'<span class="small">장소를 선택하면 동선 링크가 나타나요.</span>';document.querySelector('.map-head span').textContent='숙소 연결은 구간별 길찾기';showMap(ids[0]||null);}
-function showMap(id){const p=id?place(id):null;const q=p?p.jp+' '+CITY.mapRegion:endpoint();$('map').src='https://maps.google.com/maps?q='+encodeURIComponent(q)+'&z=14&output=embed';$('mapCaption').textContent=(p?p.name:'출발 위치')+' 위치 미리보기 · 전체 경로는 위 구글맵 버튼에서 확인하세요.'}
+function showMap(id){const p=id?place(id):null;const q=p?p.jp+' '+CITY.mapRegion:endpoint();window.tripPrivacy.setMap('https://maps.google.com/maps?q='+encodeURIComponent(q)+'&z=14&output=embed');$('mapCaption').textContent=(p?p.name:'출발 위치')+' 위치 미리보기 · 전체 경로는 위 구글맵 버튼에서 확인하세요.'}
 function render(){renderCatalog();renderPlan()}
 function toggle(id){selected.has(id)?selected.delete(id):selected.add(id);generate()}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab){tab=b.dataset.tab;renderCatalog()}if(b.dataset.pick)toggle(b.dataset.pick);if(b.dataset.day!==undefined){active=Number(b.dataset.day);renderPlan()}if(b.dataset.remove){selected.delete(b.dataset.remove);days=days.map(d=>d.filter(id=>id!==b.dataset.remove));render()}if(b.dataset.order){const d=days[active],i=d.indexOf(b.dataset.order),j=i+Number(b.dataset.dir);if(j>=0&&j<d.length){[d[i],d[j]]=[d[j],d[i]];renderPlan()}}if(b.dataset.map)showMap(b.dataset.map)});
@@ -49,9 +49,13 @@ function loadRecommended(announce=false){$('days').value=String(CITY.defaultDays
 $('recommended').onclick=()=>loadRecommended(true);
 loadRecommended();
 async function loadVisitorCounts(){
- try{const data=await window.tripApi('/api/visitors',{});if(!Number.isSafeInteger(data.today)||!Number.isSafeInteger(data.total))throw new Error('Invalid counts');$('todayVisitors').textContent=data.today.toLocaleString('ko-KR');$('totalVisitors').textContent=data.total.toLocaleString('ko-KR');$('visitorStatus').textContent=data.day+' · 한국시간 기준';}
- catch{$('visitorStatus').textContent='방문자 집계를 연결하지 못했어요.';}
+ if(!window.tripPrivacy.analyticsAllowed()){$('todayVisitors').textContent='—';$('totalVisitors').textContent='—';$('visitorStatus').textContent='방문통계 선택 동의 전 · 집계하지 않습니다.';return}
+ try{const ready=await window.tripApi('/api/privacy-status');if(!ready.analyticsReady)throw Error('통계 보관 설정 준비 중');if(!window.tripPrivacy.analyticsAllowed())return;
+ const data=await window.tripApi('/api/visitors',{consentVersion:'2026-10-17'});if(!window.tripPrivacy.analyticsAllowed())return;if(!Number.isSafeInteger(data.today)||!Number.isSafeInteger(data.total))throw Error('Invalid counts');$('todayVisitors').textContent=data.today.toLocaleString('ko-KR');$('totalVisitors').textContent=data.total.toLocaleString('ko-KR');$('visitorStatus').textContent=data.day+' · 동의한 브라우저 기준';}
+ catch{$('visitorStatus').textContent='방문통계 보관 설정 준비 중 · 새 방문은 집계하지 않습니다.';}
 }
+window.addEventListener('trip-privacy-change',loadVisitorCounts);
 const visitorReady=loadVisitorCounts();
 let visitDate=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date());
 setInterval(()=>{const current=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date());if(current!==visitDate){visitDate=current;loadVisitorCounts();}},60000);
+
